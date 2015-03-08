@@ -30,7 +30,25 @@ public class ControlCenterController {
     @RequestMapping(value = "/fromInfoTools")
     private void sendToFirePower(HttpServletRequest request) {
         System.out.println("Пришло с InfoTools");
-        firePowerServiceClient.sendToFirePower("sdvdvsvssdvsdvsdv");
+        /* Придет
+        [{radial_distance: 30000,
+           polar_angle: 2.1,
+           azimuth_angle: 1.3},
+           {radial_distance: 40000,
+           polar_angle: 1.7,
+           azimuth_angle: 0.6}] */
+        SpaceObject spaceObject = new SpaceObject();
+        // засетить поля, перед этим перевести в x, y, z
+        spaceObjectDao.insertSpaceObject(spaceObject);
+
+        // здесь get запрос на FirePower чтоб получить список ОС и выбрать средство для выстрела
+        firePowerServiceClient.sendToFirePowerGetList();
+
+        // когда уже стреляем
+        /* {radial_distance: 40000,
+           polar_angle: 1.7,
+           azimuth_angle: 0.6} + ID OC */
+        firePowerServiceClient.sendToFirePowerTheShort("sdvdvsvssdvsdvsdv");
     }
 
     @RequestMapping(value = "/fromFirePower")
