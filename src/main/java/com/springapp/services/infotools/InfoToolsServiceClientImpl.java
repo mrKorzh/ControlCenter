@@ -23,12 +23,13 @@ public class InfoToolsServiceClientImpl implements InfoToolsServiceClient {
     private String infoToolsServiceUrl = "http://localhost:8884";
 
     @Override
-    public void sendToInfoTools(String json) {
+    public void sendToInfoTools(String latitude, String longitude) {
         try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
             HttpPost httpPost = new HttpPost(infoToolsServiceUrl + "/InfoToolsService/fromControlCenter");
 
             List<NameValuePair> nameValuePairs = new ArrayList<>();
-            nameValuePairs.add(new BasicNameValuePair("json", json));
+            nameValuePairs.add(new BasicNameValuePair("latitude", latitude));
+            nameValuePairs.add(new BasicNameValuePair("longitude", longitude));
 
             httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs, Consts.UTF_8));
 

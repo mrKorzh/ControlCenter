@@ -1,10 +1,13 @@
 package com.springapp.services;
 
+import com.springapp.jacksonexamples.CurrentObjectLocation;
+import com.springapp.jacksonexamples.FirePower;
 import com.springapp.services.firepower.FirePowerServiceClient;
 import com.springapp.services.infotools.InfoToolsServiceClient;
 import com.springapp.spaceobject.SpaceObject;
-import com.springapp.spaceobject.dao.SpaceObjectDao;
 import com.springapp.spaceobject.dao.SpaceObjectDaoImpl;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -12,12 +15,13 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.util.List;
 
 @Controller
 @RequestMapping("/ControlCenterService")
 public class ControlCenterController {
 
-    // переделать DI
     private ApplicationContext applicationContext = new ClassPathXmlApplicationContext("beans.xml");
     private SpaceObjectDaoImpl spaceObjectDao = (SpaceObjectDaoImpl)applicationContext.getBean("SpaceObjectDaoImpl");
 
@@ -28,7 +32,7 @@ public class ControlCenterController {
     private FirePowerServiceClient firePowerServiceClient;
 
     @RequestMapping(value = "/fromInfoTools")
-    private void sendToFirePower(HttpServletRequest request) {
+    private void sendToFirePower(HttpServletRequest request) throws IOException {
         System.out.println("Пришло с InfoTools");
         /* Придет
         [{radial_distance: 30000,
@@ -37,28 +41,61 @@ public class ControlCenterController {
            {radial_distance: 40000,
            polar_angle: 1.7,
            azimuth_angle: 0.6}] */
-        SpaceObject spaceObject = new SpaceObject();
-        // засетить поля, перед этим перевести в x, y, z
-        spaceObjectDao.insertSpaceObject(spaceObject);
+        ObjectMapper mapper = new ObjectMapper();
+        List<CurrentObjectLocation> currentObjectLocationList = mapper.readValue(request.getReader().readLine(),
+                new TypeReference<List<CurrentObjectLocation>>() {
+                });
 
-        // здесь get запрос на FirePower чтоб получить список ОС и выбрать средство для выстрела
-        firePowerServiceClient.sendToFirePowerGetList();
+        // пишем в каталог инфу о объекте
+        for (CurrentObjectLocation currentObjectLocation : currentObjectLocationList) {
+            double radialDistance = Double.valueOf(currentObjectLocation.getRadial_distance());
+            double polarAngle = Double.valueOf(currentObjectLocation.getPolar_angle());
+            double azimuthAngle = Double.valueOf(currentObjectLocation.getAzimuth_angle());
+            SpaceObject spaceObject = new SpaceObject();
+            // засетить поля в spaceObject, перед этим перевести в x, y, z
+            spaceObjectDao.insertSpaceObject(spaceObject);
 
-        // когда уже стреляем
-        /* {radial_distance: 40000,
-           polar_angle: 1.7,
-           azimuth_angle: 0.6} + ID OC */
-        firePowerServiceClient.sendToFirePowerTheShort("sdvdvsvssdvsdvsdv");
+
+            // здесь get запрос на FirePower чтоб получить список ОС и выбрать средство для выстрела
+            String jsonListFirePowers = firePowerServiceClient.sendToFirePowerGetList();
+            List<FirePower> listFirePOwers = mapper.readValue(jsonListFirePowers,
+                    new TypeReference<List<FirePower>>() {
+                    });
+            Double bestNumber = null; // сюда положить number огневого средства которым стрелять
+            for (FirePower firePower : listFirePOwers) {
+                double azimutMax = firePower.getAzimutMax();
+                double azimutMin = firePower.getAzimutMin();
+                double placeAngleMax = firePower.getPlaceAngleMax();
+            }
+
+            // здесь нужно еще решить каким средством стрелять
+
+            // когда уже стреляем
+            /* {radial_distance: 40000,
+                 polar_angle: 1.7,
+                 azimuth_angle: 0.6} + number (bestNumber) */
+            String jsonToFirePowerForShort =
+                            "{\"radial_distance\": \"" + radialDistance + "\", " +
+                            "\"polar_angle\": \"" + polarAngle + "\", " +
+                            "\"azimut_angle\": \"" + azimuthAngle + "\", " +
+                            "\"number\": \"" + bestNumber.toString() + "\"" +
+                            "}";
+            firePowerServiceClient.sendToFirePowerTheShort(jsonListFirePowers);
+        }
     }
 
     @RequestMapping(value = "/fromFirePower")
-    private void getResultFromFirePower(HttpServletRequest request) {
+    private void getResultFromFirePower(HttpServletRequest request) throws IOException {
         System.out.println("Успешный цикл");
     }
 
-    @RequestMapping(value = "/fromControlCenter")   // начало цикла
+
+    // начало цикла, http://localhost:8080/ControlCenterService/fromControlCenter?latitude=34.5n&longitude=56.9e
+    @RequestMapping(value = "/fromControlCenter")
     private void sendToInfoTools(HttpServletRequest request) {
-        infoToolsServiceClient.sendToInfoTools("qwertty");
+        String latitude = request.getParameter("latitude");
+        String longitude = request.getParameter("longitude");
+        infoToolsServiceClient.sendToInfoTools(latitude, longitude);
     }
 
     @RequestMapping(value = "/test")   // потом удалить (после полного тестирования бд)

@@ -25,7 +25,6 @@ import java.util.List;
 @Component
 public class FirePowerServiceClientImpl implements FirePowerServiceClient {
 
-    //@Value("${services.controlcenter.url}")
     private String firePowerServiceUrl = "http://localhost:8082";
 
     @Override
@@ -63,8 +62,10 @@ public class FirePowerServiceClientImpl implements FirePowerServiceClient {
             while ((line = rd.readLine()) != null) {
                 result.append(line);
             }
+            System.out.println(result);
             return result.toString();
         }  catch (IOException e) {
+            System.out.println(e);
             return e.toString();
         }
     }
