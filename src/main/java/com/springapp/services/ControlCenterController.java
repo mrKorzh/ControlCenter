@@ -13,8 +13,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 
@@ -31,9 +33,12 @@ public class ControlCenterController {
     @Autowired
     private FirePowerServiceClient firePowerServiceClient;
 
+    private String targetsForFrontend;
+
     @RequestMapping(value = "/fromInfoTools")
     private void sendToFirePower(HttpServletRequest request) throws IOException {
         System.out.println("Пришло с InfoTools");
+        targetsForFrontend = request.getReader().readLine();
         /* Придет
         [{radial_distance: 30000,
            polar_angle: 2.1,
@@ -41,6 +46,7 @@ public class ControlCenterController {
            {radial_distance: 40000,
            polar_angle: 1.7,
            azimuth_angle: 0.6}] */
+
         ObjectMapper mapper = new ObjectMapper();
         List<CurrentObjectLocation> currentObjectLocationList = mapper.readValue(request.getReader().readLine(),
                 new TypeReference<List<CurrentObjectLocation>>() {
@@ -75,7 +81,7 @@ public class ControlCenterController {
                  polar_angle: 1.7,
                  azimuth_angle: 0.6} + number (bestNumber) */
             String jsonToFirePowerForShort =
-                            "{\"radial_distance\": \"" + radialDistance + "\", " +
+                    "{\"radial_distance\": \"" + radialDistance + "\", " +
                             "\"polar_angle\": \"" + polarAngle + "\", " +
                             "\"azimut_angle\": \"" + azimuthAngle + "\", " +
                             "\"number\": \"" + bestNumber.toString() + "\"" +
@@ -96,6 +102,14 @@ public class ControlCenterController {
         String latitude = request.getParameter("latitude");
         String longitude = request.getParameter("longitude");
         infoToolsServiceClient.sendToInfoTools(latitude, longitude);
+    }
+
+    // отдать на фронтенд targets
+    // "targets"=[{...},...,{...}]
+    @RequestMapping(value = "/getTargets")
+    @ResponseBody
+    private String getTargetsForFrontend() {
+        return targetsForFrontend;
     }
 
     @RequestMapping(value = "/test")   // потом удалить (после полного тестирования бд)
